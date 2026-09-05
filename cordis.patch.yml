@@ -1,0 +1,4 @@
+# Copyright © 2026 Manolo Remiddi · SPDX-License-Identifier: MIT
+- insert:
+    - id: prompt-library
+      name: dsh-prompt-library
