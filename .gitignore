@@ -1,4 +1,5 @@
-# Copyright © 2026 Manolo Remiddi · SPDX-License-Identifier: MIT
 node_modules/
-npm-debug.log*
-.DS_Store
+*.tgz
+__pycache__/
+*.sqlite3*
+outputs/

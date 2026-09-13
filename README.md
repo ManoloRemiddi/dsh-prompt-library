@@ -1,36 +1,116 @@
 <!-- Copyright © 2026 Manolo Remiddi · SPDX-License-Identifier: MIT -->
-# DSH Prompt library
+# DSH Prompt Library
 
-A local DSH plugin that owns reusable prompts for Augmentor's Linux app and browser extension. Open **DSH → Settings → Prompt library** to add a shortcut name and prompt text, search, rename or delete entries. Click a saved prompt to preview its full text, then choose **Edit**. **Save prompt** updates that entry and returns to its preview; **Cancel** discards the draft. In either Augmentor composer, type `/` followed by the name; select with arrows and Enter/Tab to insert into the draft. Insertion does not send a message.
+Save, search, preview, edit and delete reusable prompts in **DSH → Settings →
+Prompt library**. Prompt text is rendered as text. Saving does not call a model
+or send a chat message. This plugin can work on its own or use an already-running
+Augmentor prompt service.
 
-Source repository: [github.com/ManoloRemiddi/dsh-prompt-library](https://github.com/ManoloRemiddi/dsh-prompt-library)
+## Download and install
 
-The library starts empty. Names use lowercase letters, numbers, hyphens and underscores, begin with a letter and have at most 40 characters. There are limits of 200 prompts, 32,000 characters per prompt and 256 KiB overall. Duplicate names and IDs are rejected by the host. Concurrent edits use DSH's namespace revision checks; a conflict keeps the draft for review and refresh.
-
-## Install
+[Download 0.2.1](https://github.com/ManoloRemiddi/dsh-prompt-library/releases/tag/v0.2.1).
+Use the ready-made `.tgz` asset:
 
 ```sh
-npm ci --omit=dev --ignore-scripts
-dsh plugin --profile web add 'link:/absolute/path/to/prompt-library-plugin'
+dsh plugin --profile web add https://github.com/ManoloRemiddi/dsh-prompt-library/releases/download/v0.2.1/dsh-prompt-library-0.2.1.tgz
 ```
 
-Reload DSH when its sessions are idle, then refresh its browser page. This package declares a DSH bundle and a client module; it does not edit DSH's shipped code. Tested against DSH `0.1.1-rc.2`; retest the public contracts before upgrading. The native app and extension changes in their development checkouts must also be loaded.
+Requirements: Linux, Node.js 22.19+ and a working DSH web profile. The standalone
+store needs **Python 3 with SQLite support** (included in standard Python builds).
+Checked with DSH **0.1.5-rc.1**; other versions may change its web/UI interfaces.
+No npm runtime dependencies or Python packages need to be downloaded for the
+store; DSH supplies the web client/React environment.
 
-## Shared contract
+Use your actual profile if different from `web`. Finish active tasks, restart
+your existing DSH process and reload its page. Open Settings → Prompt library,
+click **New prompt**, enter a shortcut and text, and click **Save prompt**.
 
-- The host registers `prompt-library` using `ctx.settings.register` with live validation.
-- The editor registers the public `settings.section` slot and uses `settings.describe` / `settings.mutate` with `expectedRevision`.
-- Consumers read the matching namespace from `settings.describe`. Its `value.prompts` is an array of `{id, name, content, updatedAt}`. Consumers do not write a separate database.
-- DSH persists the namespace in its local settings document (normally `~/.dsh/settings.yaml`), alongside its other plugin settings. Neither the plugin nor selecting a saved prompt calls a model.
-- The first activation imports the old `$XDG_DATA_HOME/augmentor/prompts.json` file when present. IDs and contents are preserved; name collisions get an `-imported-N` suffix. Import is marked in DSH only after a successful commit. The old file is left intact for recovery; it is no longer the live source.
+This package adds the editor. Slash-menu insertion in a chat composer requires
+a compatible Augmentor interface; it is not added to every DSH composer by this
+plugin. `[clipboard]` is stored as a literal marker; expansion belongs to a
+compatible consuming app, not the editor.
 
-The plugin has no MX Linux or desktop-shell dependency. ResonantOS or another DSH surface can consume the same namespace without embedding the Augmentor UI or duplicating storage.
+## Storage modes
 
-## Tests
+**Standalone (default):** data lives in
+`$XDG_DATA_HOME/dsh-prompt-library/prompts.sqlite3`, or
+`~/.local/share/dsh-prompt-library/prompts.sqlite3` when XDG_DATA_HOME is unset.
+Set `DSH_PROMPT_LIBRARY_DATA` in the environment used to start DSH to choose a
+different directory. `AUGMENTOR_PYTHON` can select the Python executable.
+
+A short-lived Python process handles each requested storage operation and exits.
+There is no persistent companion, polling timer, model call or GPU keep-alive.
+The editor refreshes when the window regains focus or you click **Refresh**.
+
+**Existing Augmentor service:** set `DSH_PROMPT_LIBRARY_SOCKET` to its existing
+Unix socket in the environment used to start DSH, for example:
+
+```sh
+export DSH_PROMPT_LIBRARY_SOCKET="$HOME/.local/state/augmentor/prompts.sock"
+dsh web
+```
+
+Start DSH this way only if an existing instance is not already running; for a
+managed service, set the variable in that service's environment instead.
+Use the actual socket path if Augmentor uses custom state paths. The service must
+already be running and support `augmentor-prompts/1`. The plugin connects to it
+without spawning, replacing or upgrading it. If unavailable, it reports an error;
+it does not silently create a second prompt store. Python is not required by the
+plugin in this mode. Use this mode to share prompts with compatible Augmentor apps.
+
+## Upgrading and data safety
+
+Version 0.1.0 stored prompts in DSH settings. The app-embedded 0.2.0 adapter used
+the shared Augmentor service. **0.2.1 does not automatically move either store.**
+A new default standalone installation starts empty and leaves old data intact.
+To retain an existing Augmentor library, select its socket as described above.
+For a 0.1.0 library, keep its settings backup and copy entries deliberately; do not
+interpret an empty new store as deleted data. Existing `link:` installations should
+update their source or replace that installation deliberately, without duplicate
+bundle rows.
+
+Concurrent saves use each prompt's revision. A stale draft remains visible after
+a conflict; copy it somewhere safe, refresh and reselect the current prompt before
+applying your changes. The plugin never automatically retries an uncertain write.
+
+The standalone store accepts shortcut names of 1–128 letters, digits, hyphens or
+underscores, up to 32,000 characters per prompt, at most 1,000 prompts and 500,000
+UTF-8 bytes of prompt content overall. Duplicate names are rejected. It creates
+private local data files. Back up the SQLite file while no prompt operation is
+running. The distributed package contains no saved prompts.
+
+## Remove
+
+```sh
+dsh plugin --profile web remove dsh-prompt-library
+```
+
+Restart DSH and reload the page. Uninstalling leaves your database and any
+external Augmentor service untouched. Remove your chosen standalone data directory
+separately only if you intentionally want to delete the saved prompts.
+
+## Tests and development
 
 ```sh
 npm ci --ignore-scripts
 npm test
+npm pack
 ```
 
-Tests cover validation, one-time migration, corrupt legacy-file preservation, settings CRUD, cross-window conflicts, live updates and rendering prompt bodies as text.
+Tests use temporary databases and a synthetic local socket. They cover CRUD,
+revision conflicts, concurrent writes, import deduplication, request-ID handling,
+no replay after a lost response, HTTP origin/action checks, and the React editor
+using the real packaged store. They do not read your prompt database or call a
+model. A disposable DSH install/composition/removal and a packaged storage call
+were also checked for this release; this is not a full native-browser end-to-end test.
+
+This release packages the current Augmentor 0.2.0 editor, replacing its private
+app imports with the included prompt-only store/client. No memory, computer
+control, diagnostic or app-management service is included.
+
+[Report a problem](https://github.com/ManoloRemiddi/dsh-prompt-library/issues) with
+your DSH version, storage mode and synthetic reproduction. Do not attach prompt
+databases or credentials. Browse the
+[DeepSeek Harness Plugins collection](https://github.com/ManoloRemiddi/deepseek-harness-plugins).
+
+MIT © 2026 Manolo Remiddi.

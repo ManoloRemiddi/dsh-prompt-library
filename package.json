@@ -1,7 +1,7 @@
 {
   "name": "dsh-prompt-library",
-  "version": "0.1.0",
-  "description": "Local prompt library in DSH Settings, shared by Augmentor's Linux and browser interfaces.",
+  "version": "0.2.1",
+  "description": "Local prompt library editor for DeepSeek Harness, with standalone SQLite storage or an existing Augmentor service",
   "license": "MIT",
   "author": "Manolo Remiddi",
   "type": "module",
@@ -13,8 +13,10 @@
   },
   "files": [
     "lib",
+    "services",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
@@ -22,7 +24,7 @@
   },
   "dsh": {
     "engines": {
-      "dsh": ">=0.1.1-rc.2"
+      "dsh": ">=0.1.5-rc.1"
     },
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -36,9 +38,6 @@
       "platform": "web"
     }
   },
-  "dependencies": {
-    "schemastery": "^3.18.0"
-  },
   "peerDependencies": {
     "react": "^18.2.0"
   },
@@ -48,5 +47,17 @@
   "devDependencies": {
     "jsdom": "^26.1.0",
     "react-dom": "^18.3.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ManoloRemiddi/dsh-prompt-library.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ManoloRemiddi/dsh-prompt-library/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "prompt-library"
+  ]
 }
